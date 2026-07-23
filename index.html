@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Portal de Mapa — Acceso Restringido</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --azul-sv: #0047AB;
+    --azul-profundo: #0B2545;
+    --oro-sv: #D4A72C;
+    --fondo: #F4F6F5;
+    --tarjeta: #FFFFFF;
+    --texto: #1B2A3C;
+    --texto-suave: #5C6B7A;
+    --borde: #E2E7E9;
+    --error: #B3261E;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:'Inter', sans-serif;
+    background:var(--fondo);
+    color:var(--texto);
+  }
+
+  /* ---------- Pantalla de acceso ---------- */
+  #pantalla-login{
+    position:relative;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    padding:24px;
+  }
+  #pantalla-login::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(0,71,171,0.06) 0, transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(212,167,44,0.08) 0, transparent 40%);
+    pointer-events:none;
+  }
+  .curvas-topograficas{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    opacity:0.5;
+    pointer-events:none;
+  }
+  .tarjeta-login{
+    position:relative;
+    z-index:1;
+    background:var(--tarjeta);
+    border:1px solid var(--borde);
+    border-radius:16px;
+    padding:44px 40px 36px;
+    max-width:400px;
+    width:100%;
+    text-align:center;
+    box-shadow:0 20px 45px -20px rgba(11,37,69,0.25);
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--texto-suave);
+    margin:0 0 10px;
+  }
+  .tarjeta-login h1{
+    font-family:'Manrope', sans-serif;
+    font-weight:800;
+    font-size:22px;
+    line-height:1.3;
+    color:var(--azul-profundo);
+    margin:0 0 8px;
+  }
+  .tarjeta-login p.desc{
+    font-size:14px;
+    color:var(--texto-suave);
+    line-height:1.5;
+    margin:0 0 28px;
+  }
+  #boton-google-container{
+    display:flex;
+    justify-content:center;
+    margin-bottom:18px;
+  }
+  .coordenadas{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--texto-suave);
+    letter-spacing:0.03em;
+    margin-top:22px;
+    padding-top:18px;
+    border-top:1px dashed var(--borde);
+  }
+  #mensaje-error{
+    display:none;
+    margin-top:16px;
+    background:#FDECEA;
+    border:1px solid #F3C4C0;
+    color:var(--error);
+    font-size:13px;
+    padding:12px 14px;
+    border-radius:8px;
+    text-align:left;
+    line-height:1.45;
+  }
+  #mensaje-error strong{display:block;margin-bottom:2px;}
+
+  /* ---------- Pantalla del mapa ---------- */
+  #pantalla-mapa{
+    display:none;
+    flex-direction:column;
+    height:100vh;
+  }
+  .barra-superior{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    background:var(--azul-profundo);
+    color:#fff;
+    padding:10px 18px;
+    flex-shrink:0;
+  }
+  .barra-superior .titulo{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family:'Manrope', sans-serif;
+    font-weight:700;
+    font-size:14px;
+  }
+  .franja-oro{
+    width:6px;
+    height:18px;
+    background:var(--oro-sv);
+    border-radius:2px;
+    flex-shrink:0;
+  }
+  .usuario-info{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:12.5px;
+    color:#CFE0FF;
+  }
+  .usuario-info img{
+    width:24px;height:24px;border-radius:50%;
+  }
+  #cerrar-sesion{
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.35);
+    color:#fff;
+    font-family:'Inter', sans-serif;
+    font-size:12px;
+    padding:6px 12px;
+    border-radius:6px;
+    cursor:pointer;
+  }
+  #cerrar-sesion:hover{background:rgba(255,255,255,0.1);}
+  #iframe-mapa{
+    flex:1;
+    width:100%;
+    border:none;
+  }
+
+  @media (max-width:480px){
+    .tarjeta-login{padding:32px 24px 28px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ PANTALLA DE ACCESO ============ -->
+<div id="pantalla-login">
+  <svg class="curvas-topograficas" viewBox="0 0 400 400" preserveAspectRatio="none">
+    <path d="M -20 60 C 100 20, 300 100, 420 40" fill="none" stroke="#0047AB" stroke-opacity="0.10" stroke-width="1.5"/>
+    <path d="M -20 100 C 100 60, 300 140, 420 80" fill="none" stroke="#0047AB" stroke-opacity="0.08" stroke-width="1.5"/>
+    <path d="M -20 320 C 120 380, 300 300, 420 360" fill="none" stroke="#D4A72C" stroke-opacity="0.14" stroke-width="1.5"/>
+    <path d="M -20 350 C 120 400, 300 330, 420 390" fill="none" stroke="#D4A72C" stroke-opacity="0.10" stroke-width="1.5"/>
+  </svg>
+
+  <div class="tarjeta-login">
+    <p class="eyebrow">Acceso restringido</p>
+    <h1>Portal de Mapa Institucional</h1>
+    <p class="desc">Inicia sesión con tu cuenta de Google para consultar la información geográfica.</p>
+
+    <div id="boton-google-container"></div>
+
+    <div id="mensaje-error">
+      <strong>No tienes acceso a este portal.</strong>
+      Tu cuenta no está autorizada para consultar este mapa. Si crees que es un error, contacta al administrador para que agregue tu correo a la lista de acceso.
+    </div>
+
+    <p class="coordenadas">centro: -88.99803, 13.85853 · geodatossv</p>
+  </div>
+</div>
+
+<!-- ============ PANTALLA DEL MAPA (visible tras login) ============ -->
+<div id="pantalla-mapa">
+  <div class="barra-superior">
+    <div class="titulo">
+      <span class="franja-oro"></span>
+      Portal de Mapa Institucional
+    </div>
+    <div class="usuario-info">
+      <img id="foto-usuario" src="" alt="">
+      <span id="correo-usuario"></span>
+      <button id="cerrar-sesion">Cerrar sesión</button>
+    </div>
+  </div>
+  <iframe id="iframe-mapa"
+    src="https://geodatossv.maps.arcgis.com/apps/mapviewer/index.html?center=-88.9980320300706%2C13.858532611556978&configurableview=true&scale=288895.277144&theme=light&webmap=13fb6c26a4584275adbe1bc032640cf9"
+    allow="geolocation"
+    title="Mapa ArcGIS Online">
+  </iframe>
+</div>
+
+<script>
+  /* =========================================================
+     CONFIGURACIÓN — edita estos dos valores antes de publicar
+     ========================================================= */
+
+  // 1) Pega aquí el Client ID que crees en Google Cloud Console
+  const GOOGLE_CLIENT_ID = "767534077897-slbfv93fprnmsaqp6gjgf9v595mhlsfh.apps.googleusercontent.com";
+
+  // 2) Lista de correos autorizados a ver el mapa (en minúsculas)
+  const CORREOS_AUTORIZADOS = [
+    "masterclasssig@gmail.com",
+    "djblasmartinez@gmail.com"
+  ];
+
+  /* ========================================================= */
+
+  function decodificarJWT(token) {
+    const payload = token.split(".")[1];
+    const json = decodeURIComponent(
+      atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
+        .split("")
+        .map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(json);
+  }
+
+  function manejarRespuestaGoogle(respuesta) {
+    const datos = decodificarJWT(respuesta.credential);
+    const correo = (datos.email || "").toLowerCase();
+    const mensajeError = document.getElementById("mensaje-error");
+
+    if (CORREOS_AUTORIZADOS.map(c => c.toLowerCase()).includes(correo)) {
+      document.getElementById("correo-usuario").textContent = datos.email;
+      document.getElementById("foto-usuario").src = datos.picture || "";
+      document.getElementById("pantalla-login").style.display = "none";
+      document.getElementById("pantalla-mapa").style.display = "flex";
+      sessionStorage.setItem("sesion_correo", correo);
+    } else {
+      mensajeError.style.display = "block";
+    }
+  }
+
+  window.onload = function () {
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: manejarRespuestaGoogle
+    });
+    google.accounts.id.renderButton(
+      document.getElementById("boton-google-container"),
+      { theme: "outline", size: "large", text: "signin_with", shape: "pill" }
+    );
+
+    // Si ya había una sesión válida en esta pestaña, evita pedir login de nuevo
+    const correoGuardado = sessionStorage.getItem("sesion_correo");
+    if (correoGuardado && CORREOS_AUTORIZADOS.map(c => c.toLowerCase()).includes(correoGuardado)) {
+      document.getElementById("correo-usuario").textContent = correoGuardado;
+      document.getElementById("pantalla-login").style.display = "none";
+      document.getElementById("pantalla-mapa").style.display = "flex";
+    }
+  };
+
+  document.getElementById("cerrar-sesion").addEventListener("click", function () {
+    sessionStorage.removeItem("sesion_correo");
+    location.reload();
+  });
+</script>
+</body>
+</html>
